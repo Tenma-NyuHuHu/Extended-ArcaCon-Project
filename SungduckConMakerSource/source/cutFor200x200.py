@@ -19,7 +19,7 @@ class ImageCropper:
         
         self.scale = 1.0        # 확대/축소 배율
         self.mouse_x, self.mouse_y = 0, 0
-        self.window_name = "Image Crop Tool (Wheel: Zoom, s: Save, q, Quit, ESC: Skip, )"
+        self.window_name = "Image Crop Tool (Wheel: Zoom, s: Save, q: Quit, ESC: Skip, )"
 
         self.is_dragging = False  # 드래그 상태 체크
         self.img_center_x = 250   # 이미지의 현재 중심 위치 (초기값: 캔버스 중앙)

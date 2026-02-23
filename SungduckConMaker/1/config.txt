@@ -1,4 +1,0 @@
-[SETTINGS]
-display_text = 니이지마 유우
-duration_per_frame = 500
-font_size = 35
