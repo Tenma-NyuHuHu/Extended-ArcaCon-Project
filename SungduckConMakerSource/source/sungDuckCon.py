@@ -17,7 +17,7 @@ def create_gif_with_text(image_folder):
     """
     conf = load_config(image_folder+"/config.txt")
     display_text = conf.get('display_text', fallback="null")
-    duration_per_frame = conf.getint('duration_per_frame', fallback=500)
+    duration_per_frame = conf.getint('duration_per_frame', fallback=550)
     font_size = conf.getint('font_size', fallback=30)
     font_path = "./fonts/MaplestoryLight.ttf"
     output_path = "./output/"+display_text+".gif"

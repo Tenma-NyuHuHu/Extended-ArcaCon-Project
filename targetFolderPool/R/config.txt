@@ -1,0 +1,4 @@
+[SETTINGS]
+display_text = R
+duration_per_frame = 550
+font_size = 35

@@ -1,0 +1,4 @@
+[SETTINGS]
+display_text = 키누가사 쇼고
+duration_per_frame = 550
+font_size = 35

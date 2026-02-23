@@ -1,0 +1,4 @@
+[SETTINGS]
+display_text = 우루시바라 유키토
+duration_per_frame = 550
+font_size = 28
