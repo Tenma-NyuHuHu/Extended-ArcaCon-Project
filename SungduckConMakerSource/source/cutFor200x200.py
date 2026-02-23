@@ -1,10 +1,16 @@
 import cv2
 import os
 import numpy as np
-
+import configparser
+from PIL import Image, ImageDraw, ImageFont
 # 설정 값
 TARGET_SIZE = 200  # 저장될 정사각형 사이즈
 
+def load_config(config_path):
+    """config.txt 파일을 읽어 딕셔너리로 반환"""
+    config = configparser.ConfigParser()
+    config.read(config_path, encoding='utf-8')
+    return config['SETTINGS']
 
 class ImageCropper:
     def __init__(self, image_path, save_path):
@@ -13,6 +19,17 @@ class ImageCropper:
         if self.img is None:
             print("이미지를 불러올 수 없습니다.")
             return
+
+        conf = load_config(save_path+"/config.txt")
+        self.display_text = conf.get('display_text', fallback="null")
+        font_size = conf.getint('font_size', fallback=30)
+
+        try:
+            self.font = ImageFont.truetype("./fonts/MaplestoryLight.ttf", font_size)
+        except IOError:
+            print("폰트 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+            return
+        
 
         self.original_img = self.img.copy()
         self.img_name = os.path.basename(image_path)
@@ -61,7 +78,6 @@ class ImageCropper:
             # 만약 "드래그를 멈추는 순간 저장"을 원하시면 여기서 self.save_crop() 호출
 
     def save_crop(self):
-        # 현재 배율에 맞춰 이미지 리사이즈
         h, w = self.original_img.shape[:2]
         new_w, new_h = int(w * self.scale), int(h * self.scale)
         resized = cv2.resize(self.original_img, (new_w, new_h))
@@ -75,7 +91,7 @@ class ImageCropper:
         # 실제 저장 로직 (화면 밖 예외 처리 생략)
         # 가이드 박스 내부의 픽셀을 추출
         crop = self.canvas[150:350, 150:350] # 가이드 박스 좌표 고정
-        
+        # cv2.imshow(self.window_name, self.canvas)
         save_path = os.path.join(self.save_path, f"crop_{self.img_name}")
         cv2.imwrite(save_path, crop)
         print(f"저장 완료: {save_path}")
@@ -108,10 +124,39 @@ class ImageCropper:
 
             # 3. 중앙에 200x200 가이드 박스 그리기 (여기에 맞추면 됨)
             margin = 3
-            cv2.rectangle(self.canvas, (150-margin, 150-margin), (350+margin, 350+margin), (0, 255, 0), 2)
+
+            display_canvas = self.canvas.copy()
+            cv2.rectangle(display_canvas, (150-margin, 150-margin), (350+margin, 350+margin), (0, 255, 0), 2)
             
-            cv2.imshow(self.window_name, self.canvas)
+
+            if self.is_dragging == False:
+                #한글 텍스트 미리보기
+                # 가이드 박스 내부(150, 150, 350, 350)에 텍스트를 합성하기 위해 가상 200x200 이미지 생성
+                temp_pil = Image.fromarray(display_canvas[150:350, 150:350])
+                draw = ImageDraw.Draw(temp_pil)
+                    
+                # 텍스트 내용 (config에서 가져온 값 혹은 테스트용)
+                    
+                # 텍스트 위치 계산 (GIF 제작 로직과 동일하게)
+                bbox = draw.textbbox((0, 0), self.display_text, font=self.font)
+                tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                pos = ((200 - tw) // 2, 200 - th - 15)
+
+                # 외곽선 (흰색)
+                for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1), (0,-1), (0,1), (-1,0), (1,0)]:
+                    draw.text((pos[0]+dx*2, pos[1]+dy*2), self.display_text,font=self.font, fill=(255, 255, 255))
+                # 본문 (검은색)
+                draw.text(pos, self.display_text, font=self.font, fill=(0, 0, 0))
+
+                # 다시 OpenCV 캔버스에 덮어쓰기
+                display_canvas[150:350, 150:350] = np.array(temp_pil)
+
+
             
+            # cv2.imshow(self.window_name, self.canvas)
+            # 화면에는 텍스트가 있는 버전을 보여줌
+            cv2.imshow(self.window_name, display_canvas)
+
             key = cv2.waitKey(1) & 0xFF
             # Ctrl+S 처리 (ASCII 19번)
             if key == ord('s'):
