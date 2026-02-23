@@ -6,6 +6,49 @@ from PIL import Image, ImageDraw, ImageFont
 # 설정 값
 TARGET_SIZE = 200  # 저장될 정사각형 사이즈
 
+def draw_stretched_text(base_img, text, font, position, fill, outline_color, stretch_ratio):
+    """
+    stretch_ratio: 1.0보다 작으면 가로로 홀쭉해지고, 크면 뚱뚱해집니다.
+    """
+    # 1. 텍스트 크기 측정
+    bbox = font.getbbox(text)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    
+    # 외곽선 두께(약 2px)를 고려해 넉넉한 임시 이미지 생성 (RGBA)
+    temp_txt_img = Image.new("RGBA", (tw + 10, th + 10), (0, 0, 0, 0))
+    temp_draw = ImageDraw.Draw(temp_txt_img)
+    
+    # 2. 임시 이미지에 텍스트 그리기 (외곽선 포함)
+    txt_pos = (5, 5)
+    # 흰색 외곽선
+    for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1), (0,-1), (0,1), (-1,0), (1,0)]:
+            temp_draw.text((txt_pos[0]+dx*4, txt_pos[1]+dy*4), text, font=font, fill=outline_color)
+    # 본문
+    temp_draw.text(txt_pos, text, font=font, fill=fill)
+    
+    # 3. 가로 비율 조절 (Resize)
+    new_width = int(temp_txt_img.width * stretch_ratio)
+    resized_txt = temp_txt_img.resize((new_width, temp_txt_img.height), Image.LANCZOS)
+    
+    # 4. 중앙 정렬을 위한 위치 재계산 및 합성
+    # position은 원래 (x, y)인데, 가로가 줄었으므로 중앙을 다시 잡습니다.
+    final_x = (200 - new_width) // 2
+    base_img.paste(resized_txt, (final_x, position[1]), resized_txt)
+
+def draw_text_with_spacing(draw, position, text, font, fill, tracking=-2):
+    """
+    tracking: 음수면 자간이 좁아지고, 양수면 넓어집니다.
+    """
+    x, y = position
+    for char in text:
+        # 현재 글자 그리기
+        draw.text((x, y), char, font=font, fill=fill)
+        
+        # 다음 글자의 시작 위치 계산
+        # font.getlength(char)는 해당 글자의 너비를 반환합니다.
+        char_width = font.getlength(char)
+        x += (char_width + tracking)  # 너비에 tracking(자간)을 더함
+
 def load_config(config_path):
     """config.txt 파일을 읽어 딕셔너리로 반환"""
     config = configparser.ConfigParser()
@@ -22,7 +65,9 @@ class ImageCropper:
 
         conf = load_config(save_path+"/config.txt")
         self.display_text = conf.get('display_text', fallback="null")
-        font_size = conf.getint('font_size', fallback=30)
+        self.stretch_ratio = conf.getfloat('stretch_ratio', fallback=0.7)
+        self.bottom_margin = conf.getint('bottom_margin', fallback=55)
+        font_size = conf.getint('font_size', fallback=45)
 
         try:
             self.font = ImageFont.truetype("./fonts/MaplestoryLight.ttf", font_size)
@@ -134,21 +179,29 @@ class ImageCropper:
                 # 가이드 박스 내부(150, 150, 350, 350)에 텍스트를 합성하기 위해 가상 200x200 이미지 생성
                 temp_pil = Image.fromarray(display_canvas[150:350, 150:350])
                 draw = ImageDraw.Draw(temp_pil)
-                    
-                # 텍스트 내용 (config에서 가져온 값 혹은 테스트용)
-                    
-                # 텍스트 위치 계산 (GIF 제작 로직과 동일하게)
-                bbox = draw.textbbox((0, 0), self.display_text, font=self.font)
-                tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-                pos = ((200 - tw) // 2, 200 - th - 15)
 
-                # 외곽선 (흰색)
-                for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1), (0,-1), (0,1), (-1,0), (1,0)]:
-                    draw.text((pos[0]+dx*2, pos[1]+dy*2), self.display_text,font=self.font, fill=(255, 255, 255))
-                # 본문 (검은색)
-                draw.text(pos, self.display_text, font=self.font, fill=(0, 0, 0))
+                # 자간조절  
+                # ascent, descent = self.font.getmetrics()
+                # text_height = ascent + descent
+                # tracking = -3
+                # # 전체 텍스트의 예상 너비를 계산해야 중앙 정렬이 가능합니다.
+                # total_width = sum(self.font.getlength(c) for c in self.display_text) + (tracking * (len(self.display_text) - 1))
+                # position = ((200 - total_width) // 2, 200 - text_height - 15)
+
+                # # 1. 흰색 외곽선 (함수 호출로 대체)
+                # outline_color = "white"
+                # for adj_x, adj_y in [(-1,-1), (-1,1), (1,-1), (1,1), (0,-1), (0,1), (-1,0), (1,0)]:
+                #     draw_text_with_spacing(draw, (position[0]+adj_x*3, position[1]+adj_y*3), 
+                #                         self.display_text, self.font, outline_color, tracking=tracking)
+
+                # # 2. 검은색 본문
+                # draw_text_with_spacing(draw, position, self.display_text, self.font, "black", tracking=tracking)
 
                 # 다시 OpenCV 캔버스에 덮어쓰기
+                
+
+
+                draw_stretched_text(temp_pil, self.display_text, self.font, (0, 200-self.bottom_margin), "black", "white", self.stretch_ratio)
                 display_canvas[150:350, 150:350] = np.array(temp_pil)
 
 

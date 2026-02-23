@@ -48,7 +48,7 @@ def create_cutwindow_and_gif():
         return
     
 
-    image_files = [os.path.join(uncropeds_path, f) for f in os.listdir(uncropeds_path) if f.endswith(('.png', '.jpg', '.jpeg', '.webp'))]
+    image_files = [os.path.join(uncropeds_path, f) for f in os.listdir(uncropeds_path) if f.endswith(('.png', '.jpg', '.jpeg', '.webp', '.PNG'))]
 
     for img_p in image_files:
         cropper = ImageCropper(img_p, target_folder)
