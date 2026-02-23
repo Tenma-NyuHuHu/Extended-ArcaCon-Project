@@ -1,0 +1,6 @@
+[SETTINGS]
+display_text = 나카히로
+duration_per_frame = 550
+font_size = 45
+bottom_padding = 55
+stretch_ratio = 0.8
