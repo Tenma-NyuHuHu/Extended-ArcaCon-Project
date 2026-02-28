@@ -1,0 +1,6 @@
+[SETTINGS]
+display_text = 쿠기미야 리에
+duration_per_frame = 550
+font_size = 45
+bottom_padding = 55
+stretch_ratio = 0.7
